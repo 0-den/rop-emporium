@@ -1,2 +1,4 @@
+break pwnme
 break *0x080485f1
+break *0x08048609
 

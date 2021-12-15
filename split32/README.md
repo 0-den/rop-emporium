@@ -173,33 +173,5 @@ fish: Process 80877, './split32' from job 1, 'python2 -c "print 'A'*44 + '\x0…
 
 だからどうにかして/bin/cat flag.txt  を実行してあげる必要がありそう。
 
-stackに/bin/sh\x00を積んであげてそのあとに適当な文字を追加してあげようかな。あってるかなぁ
 
-804860c
-
-\x0c\x86\x04\x08
-
-0x0804a030
-
-\x30\xa0\x04\x08
-
-
-
-80483e0 (system)
-
-\xe0\x83\x04\x08
-
-
-
-##   チーム名　
-
-0xdead0e7d (デッドエンド)
-
-machine fatale　(マシーンファタール)
-
-e^-1+1017  (エクスプロイト)
-
-LEAf (リーフ)
-
-Ascension
 
