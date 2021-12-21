@@ -6,7 +6,7 @@ work ROP Emporium with team
 - [x] ret2win (@mizuirorivi)
 - [x] split (@mizuirorivi)
 - [x] callme(@mizuirorivi)
-- [ ] write4
+- [x] write4(@mizuirorivi)
 
 ### x86-64
 
