@@ -8,6 +8,7 @@ work ROP Emporium with team
 - [x] callme(@mizuirorivi)
 - [x] write4(@mizuirorivi)
 - [x] badchars(@mizuirorivi)
+- [x] fluff(@mizuirorivi)
 
 ### x86-64
 
